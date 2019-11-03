@@ -53,7 +53,7 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced, wr
             break # The game ends by having three strikes
 
         r.get_play(players[r.whoseTurn]) # Play one turn.
-        action_taken = r.playHistory[len(r.playHistory) - 1]
+        r.playHistory[len(r.playHistory) - 1]
         # print(action_taken)
         reward = r.get_reward()
         episode_reward += reward
