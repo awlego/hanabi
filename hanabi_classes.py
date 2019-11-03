@@ -107,6 +107,7 @@ class Round(object):
         self.discardpile = []
 
         self.last_reward = 0 # reward for RL environment
+        self.handSize = 4
 
         # Provides a shared starting seed for fixed-seed pseudo RNG methods.
         self.CommonSeed = random.randint(0,sys.maxsize)
@@ -133,12 +134,11 @@ class Round(object):
         self.startingDeck = deck[:]
         self.startingDeckSize = len(deck)
 
-        handSize = 4
         if self.nPlayers < 4:
-            handSize += 1
+            self.handSize += 1
         for i in range(self.nPlayers): # Deal cards to all players.
-            for j in range(handSize):
-                self.h[i].add(self.draw(), self.turnNumber - handSize + j, self.startingDeckSize-len(self.deck)-1)
+            for j in range(self.handSize):
+                self.h[i].add(self.draw(), self.turnNumber - self.handSize + j, self.startingDeckSize-len(self.deck)-1)
             if self.verbose:
                 self.h[i].show(self.zazz[0], self.logger)
                 self.zazz[0] = ' ' * len(self.zazz[0])
@@ -259,6 +259,7 @@ class Round(object):
           position (int): the position from which the card was played or discarded (0-4). Equals -1 if still in hand
           misplayed (bool): set to true if this card was misplayed
         seat (int): Player ID number (starting player is 0).
+        name (str): the name of the player holding this hand
         """
 
         def __init__(self, seat, name):
@@ -335,3 +336,4 @@ class Round(object):
                 print("*"*37)
                 print("\n\n You have been caught by the police! \n\n")
                 print("*"*37)
+    
