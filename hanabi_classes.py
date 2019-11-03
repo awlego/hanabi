@@ -106,6 +106,8 @@ class Round(object):
         self.Resign = False
         self.discardpile = []
 
+        self.last_reward = 0 # reward for RL environment
+
         # Provides a shared starting seed for fixed-seed pseudo RNG methods.
         self.CommonSeed = random.randint(0,sys.maxsize)
 
@@ -238,6 +240,9 @@ class Round(object):
             self.logger.info(self.zazz[1] + ' {} [{}] {}s {}'\
                     .format(hand.name, verboseHandAtStart, playType, desc))
             self.zazz[1] = ' ' * len(self.zazz[1])
+    
+    def get_reward(self):
+        return (sum(self.progress.values()) - self.last_reward)
 
 
     class Hand(object):
