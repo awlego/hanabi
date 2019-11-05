@@ -52,7 +52,7 @@ class ReinforcementLearningPlayer(AIPlayer):
     def get_observed_hands(self, r):
         me = r.whoseTurn
         observed_hands = []
-        for hand in r.h[me+1:r.nPlayers]:
+        for hand in r.h[me+1:r.nPlayers] + r.h[0:me]:
             # hands.cards has extra info that we won't use... ideally I would remove the extra fields.
             observed_hands.append(hand.cards)
         return observed_hands
@@ -84,38 +84,52 @@ class ReinforcementLearningPlayer(AIPlayer):
         observation['discardpile'] = r.discardpile
         observation['suits'] = r.suits
         observation['deck_size'] = len(r.deck)
+        observation['handSize'] = r.handSize
         
         return observation
 
 
-    def get_legal_actions(self, observation, r):
+    def get_legal_actions(self, observation):
         '''Returns a list of the legal game actions'''
 
-        legal_actions = {}
+        legal_actions = []
         if observation['hints'] < 8:
-            legal_actions['discard'] = [slot for slot in range(r.handSize)]
+            discards = [slot for slot in range(observation['handSize'])]
+            for discard in discards:
+                legal_actions.append(('discard', discard))
 
-        legal_actions['play'] = [slot for slot in range(r.handSize)]
+        plays = [slot for slot in range(observation['handSize'])]
+        for play in plays:
+            legal_actions.append(('play', play))
+            # these 'plays' need to be actual card objects, not just ints.
 
-        legal_hints = []
-        for hand in observation['teammate_hands']:
-            for card in hand:
-                legal_hints.append(0)
-        
-        legal_actions['hint'] = legal_hints
+        if observation['hints'] > 0:
+            for i, hand in enumerate(observation['teammate_hands']):
+                #TODO this i needs to be absolute, not relative.
+                infos = []
+                for card in hand:
+                    for info in possible_hints(card):
+                        infos.append(info)
+                unique_infos = set(infos)
+                for info in unique_infos:
+                    legal_actions.append(('hint', (i, info)))
+                
         return legal_actions
     
 
     def select_action(self, observation, possible_actions):
         '''Looks at the world and selects an action based on the policy'''
-        return NotImplementedError
+        action = random.choice(possible_actions)
+        return action
 
 
     def play(self, r):
 
         observation = self.get_observation(r)
-        possible_actions = self.get_legal_actions(observation, r)
-        action = self.select_action(observation, [possible_actions])
+        legal_actions = self.get_legal_actions(observation)
+        action = self.select_action(observation, legal_actions)
+        # print(action)
+        # return(action)
         
         # return self.newest_play(r)
 
@@ -143,26 +157,27 @@ class ReinforcementLearningPlayer(AIPlayer):
         # first preference is to play hinted cards, then known
         # was I hinted since my last turn?
         # only care about the first hint received in that time
-        # for playType, playValue in r.playHistory[1-r.nPlayers:]:
-        #     if playType == 'hint':
-        #         target, info = playValue
-        #         # number of turns until hinted player plays
-        #         hintee = (target - me + r.nPlayers) % r.nPlayers
-        #         if target == me:
-        #             play = self.get_my_newest_hinted(cards, info)
-        #             if play and possibly_playable(play, r.progress):
-        #                 return 'play', play
-        #         elif hintee < hinterPosition: # hintee hasn't yet played
-        #             targetCard = self.get_newest_hinted(r.h[target].cards, info)
-        #             if targetCard:
-        #                 alreadyHinted[target] = targetCard
-        #     hinterPosition += 1
+        for playType, playValue in r.playHistory[1-r.nPlayers:]:
+            if playType == 'hint':
+                target, info = playValue
+                # number of turns until hinted player plays
+                hintee = (target - me + r.nPlayers) % r.nPlayers
+                if target == me:
+                    play = self.get_my_newest_hinted(cards, info)
+                    if play and possibly_playable(play, r.progress):
+                        print(play)
+                        return 'play', play
+                elif hintee < hinterPosition: # hintee hasn't yet played
+                    targetCard = self.get_newest_hinted(r.h[target].cards, info)
+                    if targetCard:
+                        alreadyHinted[target] = targetCard
+            hinterPosition += 1
 
-        # # check my knowledge about my cards, are any guaranteed playable?
-        # myPlayableCards = deduce_plays(cards, progress, r.suits)
+        # check my knowledge about my cards, are any guaranteed playable?
+        myPlayableCards = deduce_plays(cards, progress, r.suits)
 
-        # if myPlayableCards != []:
-        #     return 'play', random.choice(myPlayableCards)
+        if myPlayableCards != []:
+            return 'play', random.choice(myPlayableCards)
  
         if r.hints > 0:
             # look around at each other hand to see if anything is playable
